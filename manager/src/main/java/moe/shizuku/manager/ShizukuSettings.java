@@ -27,6 +27,7 @@ public class ShizukuSettings {
     public static final String KEEP_START_ON_BOOT_WIRELESS = "start_on_boot_wireless";
     public static final String ADB_ROOT = "adb_root";
     public static final String PENDING_SECURE_SETTINGS_GRANT = "pending_secure_settings_grant";
+    public static final String KEEP_START_ON_BOOT_WIRELESS = "start_on_boot_wireless";
 
     private static SharedPreferences sPreferences;
 
@@ -37,6 +38,7 @@ public class ShizukuSettings {
     @NonNull
     private static Context getSettingsStorageContext(@NonNull Context context) {
         Context storageContext;
+        storageContext = context.createDeviceProtectedStorageContext();
         storageContext = context.createDeviceProtectedStorageContext();
 
         storageContext = new ContextWrapper(storageContext) {
@@ -57,7 +59,16 @@ public class ShizukuSettings {
     public static void initialize(Context context) {
         if (sPreferences == null) {
             sPreferences = getSettingsStorageContext(context).getSharedPreferences(NAME, Context.MODE_PRIVATE);
+            sPreferences = getSettingsStorageContext(context).getSharedPreferences(NAME, Context.MODE_PRIVATE);
         }
+    }
+
+    @IntDef({LaunchMethod.UNKNOWN, LaunchMethod.ROOT, LaunchMethod.ADB,})
+    @Retention(SOURCE)
+    public @interface LaunchMethod {
+        int UNKNOWN = -1;
+        int ROOT = 0;
+        int ADB = 1;
     }
 
     @LaunchMethod
