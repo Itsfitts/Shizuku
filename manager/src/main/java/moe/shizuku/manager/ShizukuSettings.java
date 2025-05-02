@@ -2,6 +2,8 @@ package moe.shizuku.manager;
 
 import static java.lang.annotation.RetentionPolicy.SOURCE;
 
+import static java.lang.annotation.RetentionPolicy.SOURCE;
+
 import android.app.ActivityThread;
 import android.content.Context;
 import android.content.ContextWrapper;
@@ -61,14 +63,6 @@ public class ShizukuSettings {
             sPreferences = getSettingsStorageContext(context).getSharedPreferences(NAME, Context.MODE_PRIVATE);
             sPreferences = getSettingsStorageContext(context).getSharedPreferences(NAME, Context.MODE_PRIVATE);
         }
-    }
-
-    @IntDef({LaunchMethod.UNKNOWN, LaunchMethod.ROOT, LaunchMethod.ADB,})
-    @Retention(SOURCE)
-    public @interface LaunchMethod {
-        int UNKNOWN = -1;
-        int ROOT = 0;
-        int ADB = 1;
     }
 
     @LaunchMethod

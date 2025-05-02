@@ -33,6 +33,40 @@ VISIT THE OFFICIAL REPO [**_HERE_**](https://github.com/RikkaApps/Shizuku)
 THIS IS A **FORK** OF SHIZUKU. IF YOU'RE LOOKING FOR SHIZUKU FROM RIKKA, THIS IS NOT THE PLACE.
 VISIT THE OFFICIAL REPO [**_HERE_**](https://github.com/RikkaApps/Shizuku)
 
+## Additional Features that this fork provides
+
+- **Auto-start**: This fork provides an auto-start feature on root-less devices that allows the Shizuku service to start automatically on boot. This is useful for users who want to ensure that the service is always running without manual intervention.
+- **Rooted-Debugging**: This fork allows you to debug the Shizuku service while it is running with root privileges. This feature is only available on `userdebug` and `eng` builds of Android.
+- **Stealth**: Prevent Shizuku from being detected by other apps. This is done by randomizing the Shizuku tmp folder name and also by deleting the starter file after the service is started.
+
+### Usage of auto-start
+
+- Follow the instructions for setting up Shizuku through Wireless ADB by pairing the app
+  - From the `Settings`, enable `Start on boot (wireless ADB)`
+    - `WRITE_SECURE_SETTINGS` permission needs to be granted prior to enabling this setting and this can be enabled either by `rish` or by connecting the device to the machine
+    - Run the following command:
+      ```bash
+      adb shell pm grant moe.shizuku.privileged.api android.permission.WRITE_SECURE_SETTINGS
+      ```
+
+> [!WARNING]
+> `WRITE_SECURE_SETTINGS` is a very sensitive permission and enable it only if you know what you're doing.
+> The developer of this fork is not responsible for whatever may happen later on.
+
+> [!NOTE]
+> Auto restart service is untested
+
+## Disclaimer
+
+THIS IS A **FORK** OF SHIZUKU. IF YOU'RE LOOKING FOR SHIZUKU FROM RIKKA, THIS IS NOT THE PLACE.
+VISIT THE OFFICIAL REPO [**_HERE_**](https://github.com/RikkaApps/Shizuku)
+
+## Additional Features that this fork provides
+
+- **Auto-start**: This fork provides an auto-start feature on root-less devices that allows the Shizuku service to start automatically on boot. This is useful for users who want to ensure that the service is always running without manual intervention.
+- **Rooted-Debugging**: This fork allows you to debug the Shizuku service while it is running with root privileges. This feature is only available on `userdebug` and `eng` builds of Android.
+- **Stealth**: Prevent Shizuku from being detected by other apps. This is done by randomizing the Shizuku tmp folder name and also by deleting the starter file after the service is started.
+
 ### Usage of auto-start
 
 - Follow the instructions for setting up Shizuku through Wireless ADB by pairing the app
