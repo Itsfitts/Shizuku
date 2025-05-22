@@ -17,6 +17,7 @@ import moe.shizuku.manager.ShizukuSettings.KEEP_START_ON_BOOT_WIRELESS
 import moe.shizuku.manager.ShizukuSettings.LaunchMethod
 import moe.shizuku.manager.ShizukuSettings.getPreferences
 import moe.shizuku.manager.adb.WirelessADBHelper.validateThenEnableWirelessAdb
+import moe.shizuku.manager.shell.Shell
 import moe.shizuku.manager.starter.SelfStarterService
 import moe.shizuku.manager.starter.StartSystemService
 import moe.shizuku.manager.starter.Starter
@@ -59,7 +60,7 @@ class BootCompleteReceiver : BroadcastReceiver() {
 
     private fun start(context: Context, startOnBootWirelessIsEnabled: Boolean, startOnBootSystem: Boolean) {
 
-        if (!Shell.rootAccess()) {
+        if (!Shell.getShell().isRoot) {
             if (startOnBootWirelessIsEnabled && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED) {
                 Log.i(AppConstants.TAG, "WRITE_SECURE_SETTINGS is enabled and user has Start on boot is enabled for wireless ADB")
                 try {
@@ -86,6 +87,6 @@ class BootCompleteReceiver : BroadcastReceiver() {
         }
 
         Starter.writeDataFiles(context)
-        Shell.su(Starter.dataCommand).exec()
+        Shell.cmd(Starter.dataCommand).exec()
     }
 }
