@@ -39,30 +39,8 @@ public class ShizukuConfigManager extends ConfigManager {
 
     private static final long WRITE_DELAY = 10 * 1000;
 
-    private static final AtomicFile ATOMIC_FILE;
-
-    static {
-        File FILE = null;
-        String dir = "/data/local/tmp";
-        File directory = new File(dir);
-        String[] files = directory.list();
-
-        if (files != null) {
-            for (String file : files) {
-                if (file.matches("^shizuku-[A-Za-z0-9]{6}$")) {
-                    FILE = new File(dir + "/" + file + "/shizuku.json");
-                }
-            }
-            LOGGER.d("Found: " + FILE.getAbsolutePath());
-        }
-
-        if (FILE == null) {
-            LOGGER.i("no existing config file");
-            System.exit(255);
-        }
-
-        ATOMIC_FILE = new AtomicFile(FILE);
-    }
+    private static final File FILE = new File("/data/user_de/0/com.android.shell/shizuku.json");
+    private static final AtomicFile ATOMIC_FILE = new AtomicFile(FILE);
 
     public static ShizukuConfig load() {
         FileInputStream stream;
@@ -85,7 +63,8 @@ public class ShizukuConfigManager extends ConfigManager {
                 LOGGER.w("failed to close: " + e);
             }
         }
-        return config;
+        if (config != null) return config;
+        return new ShizukuConfig();
     }
 
     public static void write(ShizukuConfig config) {
@@ -128,13 +107,6 @@ public class ShizukuConfigManager extends ConfigManager {
 
         if (config.packages == null) {
             config.packages = new ArrayList<>();
-            changed = true;
-        }
-
-        if (config.version < 2) {
-            for (ShizukuConfig.PackageEntry entry : new ArrayList<>(config.packages)) {
-                entry.packages = PackageManagerApis.getPackagesForUidNoThrow(entry.uid);
-            }
             changed = true;
         }
 
