@@ -32,40 +32,18 @@ class AppsViewModel(context: Context) : ViewModel() {
     private val _grantedCount = MutableLiveData<Resource<Int>>()
     val grantedCount = _grantedCount as LiveData<Resource<Int>>
 
-    fun load() {
+    fun load(onlyCount: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val list: MutableList<PackageInfo> = ArrayList()
                 var count = 0
                 for (pi in AuthorizationManager.getPackages()) {
                     list.add(pi)
-                    if (AuthorizationManager.granted(pi.packageName, pi.applicationInfo?.uid?:-1)) count++
+                    if (AuthorizationManager.granted(pi.packageName, pi.applicationInfo!!.uid)) count++
                 }
-                _packages.postValue(Resource.success(list))
+                if (!onlyCount) _packages.postValue(Resource.success(list))
                 _grantedCount.postValue(Resource.success(count))
-            } catch (_: CancellationException) {
-
-            } catch (e: Throwable) {
-                _packages.postValue(Resource.error(e, null))
-                _grantedCount.postValue(Resource.error(e, 0))
-            }
-        }
-    }
-
-    fun loadCount() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val list: MutableList<PackageInfo> = ArrayList()
-                val packages: MutableList<String> = ArrayList()
-                for (pi in AuthorizationManager.getPackages()) {
-                    list.add(pi)
-                    if (AuthorizationManager.granted(
-                            pi.packageName,
-                            pi.applicationInfo?.uid?:-1
-                        )
-                    ) packages.add(pi.packageName)
-                }
-            } catch (_: CancellationException) {
+            } catch (e: CancellationException) {
 
             } catch (e: Throwable) {
                 _packages.postValue(Resource.error(e, null))
