@@ -158,7 +158,7 @@ static int switch_cgroup() {
     printf("info: cgroup is /uid_%d/pid_%d\n", s_cuid, s_cpid);
     fflush(stdout);
 
-    if (cgroup::switch_cgroup(spid) != 0) {
+    if (cgroup::switch_cgroup(spid, -1, -1) != 0) {
         printf("warn: can't switch cgroup\n");
         fflush(stdout);
         return -1;
@@ -381,6 +381,26 @@ using main_func = int (*)(int, char *[]);
 
 static main_func applet_main[] = {starter_main, nullptr};
 
+static void move_cgroup(int dpid) {
+    const char* cgroup_path = "/sys/fs/cgroup/uid_0/cgroup.procs";
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%d\n", dpid);
+
+    if (getuid() != 1000)
+        return;
+
+    int fd = open(cgroup_path, O_WRONLY);
+    if (fd < 0)
+        return;
+
+    if (write(fd, buf, strlen(buf)) == -1) {
+        close(fd);
+        return;
+    }
+
+    close(fd);
+}
+
 static int fork_daemon(int returnParent) {
     pid_t child = fork();
     if (child < 0) {
@@ -422,10 +442,7 @@ static int fork_daemon(int returnParent) {
         exit(EXIT_SUCCESS);
     }
 
-    if (getuid() == 1000) {
-        if (cgroup::switch_cgroup(getpid()) == 0)
-            LOGD("cgroup switched!");
-    }
+    move_cgroup(getpid());
 
     // Second child
     return 0;

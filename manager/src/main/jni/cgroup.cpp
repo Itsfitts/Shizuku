@@ -41,28 +41,33 @@ namespace cgroup {
         return -1;
     }
 
-    int switch_cgroup(int pid) {
+    static int switch_cgroup(int pid, int cuid, int cpid, const char *name) {
         char buf[PATH_MAX];
-
-        // TODO: add more later on
-        const char* cgroup_paths[] = {
-                "/sys/fs/cgroup/uid_0/cgroup.procs",
-                "/acct/uid_0/cgroup.procs",
-                "/acct/cgroup.procs"
-        };
-
-        for (const char* path : cgroup_paths) {
-            int fd = open(path, O_WRONLY | O_APPEND);
-            if (fd != -1) {
-                snprintf(buf, sizeof(buf), "%d\n", pid);
-                if (write(fd, buf, strlen(buf)) != -1) {
-                    close(fd);
-                    return 0;
-                }
-                close(fd);
-            }
+        if (cuid != -1 && cpid != -1) {
+            snprintf(buf, PATH_MAX, "/acct/uid_%d/pid_%d/%s", cuid, cpid, name);
+        } else {
+            snprintf(buf, PATH_MAX, "/acct/%s", name);
         }
 
-        return -1;
+        int fd = open(buf, O_WRONLY | O_APPEND);
+        if (fd == -1)
+            return -1;
+
+        snprintf(buf, PATH_MAX, "%d\n", pid);
+        if (write(fd, buf, strlen(buf)) == -1) {
+            close(fd);
+            return -1;
+        }
+
+        close(fd);
+        return 0;
     }
+
+    int switch_cgroup(int pid, int cuid, int cpid) {
+        int res = 0;
+        res += switch_cgroup(pid, cuid, cpid, "cgroup.procs");
+        res += switch_cgroup(pid, cuid, cpid, "tasks");
+        return res;
+    }
+
 }
