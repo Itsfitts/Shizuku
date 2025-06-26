@@ -145,6 +145,36 @@ static int check_selinux(const char *s, const char *t, const char *c, const char
     return res;
 }
 
+static int switch_cgroup() {
+    int s_cuid, s_cpid;
+    int spid = getpid();
+
+    if (cgroup::get_cgroup(spid, &s_cuid, &s_cpid) != 0) {
+        printf("warn: can't read cgroup\n");
+        fflush(stdout);
+        return -1;
+    }
+
+    printf("info: cgroup is /uid_%d/pid_%d\n", s_cuid, s_cpid);
+    fflush(stdout);
+
+    if (cgroup::switch_cgroup(spid) != 0) {
+        printf("warn: can't switch cgroup\n");
+        fflush(stdout);
+        return -1;
+    }
+
+    if (cgroup::get_cgroup(spid, &s_cuid, &s_cpid) != 0) {
+        printf("info: switch cgroup succeeded\n");
+        fflush(stdout);
+        return 0;
+    }
+
+    printf("warn: can't switch self, current cgroup is /uid_%d/pid_%d\n", s_cuid, s_cpid);
+    fflush(stdout);
+    return -1;
+}
+
 void redirectStd(int old_fd) {
     dup2(old_fd, STDIN_FILENO);
     dup2(old_fd, STDOUT_FILENO);
@@ -245,6 +275,7 @@ int starter_main(int argc, char *argv[]) {
     if (uid == 0) {
         chown("/data/local/tmp/shizuku_starter", 2000, 2000);
         se::setfilecon("/data/local/tmp/shizuku_starter", "u:object_r:shell_data_file:s0");
+        switch_cgroup();
 
         int sdkLevel = 0;
         char buf[PROP_VALUE_MAX + 1];

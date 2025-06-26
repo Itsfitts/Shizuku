@@ -23,6 +23,24 @@ namespace cgroup {
         return len;
     }
 
+    int get_cgroup(int pid, int* cuid, int *cpid) {
+        char buf[PATH_MAX];
+        snprintf(buf, PATH_MAX, "/proc/%d/cgroup", pid);
+
+        int fd = open(buf, O_RDONLY);
+        if (fd == -1)
+            return -1;
+
+        while (fdgets(buf, PATH_MAX, fd) > 0) {
+            if (sscanf(buf, "%*d:cpuacct:/uid_%d/pid_%d", cuid, cpid) == 2) {
+                close(fd);
+                return 0;
+            }
+        }
+        close(fd);
+        return -1;
+    }
+
     int switch_cgroup(int pid) {
         char buf[PATH_MAX];
 
