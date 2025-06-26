@@ -381,26 +381,6 @@ using main_func = int (*)(int, char *[]);
 
 static main_func applet_main[] = {starter_main, nullptr};
 
-static void move_cgroup(int dpid) {
-    const char* cgroup_path = "/sys/fs/cgroup/uid_0/cgroup.procs";
-    char buf[8];
-    snprintf(buf, sizeof(buf), "%d\n", dpid);
-
-    if (getuid() != 1000)
-        return;
-
-    int fd = open(cgroup_path, O_WRONLY);
-    if (fd < 0)
-        return;
-
-    if (write(fd, buf, strlen(buf)) == -1) {
-        close(fd);
-        return;
-    }
-
-    close(fd);
-}
-
 static int fork_daemon(int returnParent) {
     pid_t child = fork();
     if (child < 0) {
@@ -441,8 +421,6 @@ static int fork_daemon(int returnParent) {
     if (child > 0) {
         exit(EXIT_SUCCESS);
     }
-
-    move_cgroup(getpid());
 
     // Second child
     return 0;
