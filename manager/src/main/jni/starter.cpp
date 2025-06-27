@@ -117,32 +117,66 @@ v_current = (uintptr_t) v + v_size - sizeof(char *); \
     }
 }
 
+static int switch_cgroup();
+
+void redirectStd(int old_fd) {
+    dup2(old_fd, STDIN_FILENO);
+    dup2(old_fd, STDOUT_FILENO);
+    dup2(old_fd, STDERR_FILENO);
+}
+
+static int fork_daemon(int returnParent) {
+    pid_t child = fork();
+    if (child < 0)
+        return -1;
+
+    if (child > 0) {
+        int status;
+        pid_t waited = waitpid(child, &status, 0);
+        if (waited == child && WIFEXITED(status)) {
+            if (!returnParent)
+                exit(EXIT_SUCCESS);
+        }
+        return -1;
+    }
+
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+
+    int devNull = open("/dev/null", O_RDWR);
+    redirectStd(devNull);
+    close(devNull);
+
+    if (setsid() < 0)
+        exit(EXIT_FAILURE);
+
+    child = fork();
+    if (child < 0)
+        exit(EXIT_FAILURE);
+
+    if (child > 0)
+        exit(EXIT_SUCCESS);
+
+    uid_t uid = getuid();
+    if (uid == 0 || uid == 1000)
+        switch_cgroup();
+    
+    return 0;
+}
+
 static void start_server(const char *path, const char *main_class, const char *process_name) {
-    pid_t pid = fork();
-    switch (pid) {
-        case -1: {
-            perrorf("fatal: can't fork\n");
-            exit(EXIT_FATAL_FORK);
-        }
-        case 0: {
-            LOGD("child");
-            setsid();
-            chdir("/");
-            int fd = open("/dev/null", O_RDWR);
-            if (fd != -1) {
-                dup2(fd, STDIN_FILENO);
-                dup2(fd, STDOUT_FILENO);
-                dup2(fd, STDERR_FILENO);
-                if (fd > 2) close(fd);
-            }
+    if (fork_daemon(0) == 0) {
+        for (int i = 0; i < 16; i++) {
             run_server(path, main_class, process_name);
-        }
-        default: {
-            printf("info: shizuku_server pid is %d\n", pid);
-            printf("info: shizuku_starter exit with 0\n");
-            exit(EXIT_SUCCESS);
+            usleep(16000);
         }
     }
+
+    pid_t pid = fork();
+    printf("info: shizuku_server pid is %d\n", pid);
+    printf("info: shizuku_starter exit with 0\n");
+    exit(EXIT_SUCCESS);
 }
 
 static int check_selinux(const char *s, const char *t, const char *c, const char *p) {
@@ -202,8 +236,6 @@ int main(int argc, char *argv[]) {
     se::init();
 
     if (uid == 0 || uid == 1000) {
-        switch_cgroup();
-
         if (android_get_device_api_level() >= 29) {
             printf("info: switching mount namespace to init...\n");
             switch_mnt_ns(1);
