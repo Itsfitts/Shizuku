@@ -64,6 +64,10 @@
     <string name="home_root_button_start">Start</string>
     <string name="home_root_button_restart">Restart</string>
 
+    <!-- Home - System -->
+    <string name="home_system_title"><![CDATA[Start (system exploit)]]></string>
+    <string name="home_system_description"><![CDATA[Start Shizuku as system.]]></string>
+
     <!-- Home - Application management -->
     <string name="home_app_management_title">Application management</string>
     <plurals name="home_app_management_authorized_apps_count">

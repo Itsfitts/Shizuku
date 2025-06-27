@@ -1,6 +1,7 @@
 package moe.shizuku.manager.starter
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.LiveData
@@ -19,6 +20,7 @@ import moe.shizuku.manager.adb.AdbKey
 import moe.shizuku.manager.adb.AdbKeyException
 import moe.shizuku.manager.adb.PreferenceAdbKeyStore
 import moe.shizuku.manager.app.AppBarActivity
+import moe.shizuku.manager.application
 import moe.shizuku.manager.databinding.StarterActivityBinding
 import rikka.lifecycle.Resource
 import rikka.lifecycle.Status
@@ -35,6 +37,7 @@ class StarterActivity : AppBarActivity() {
         ViewModel(
             this,
             intent.getBooleanExtra(EXTRA_IS_ROOT, true),
+            intent.getBooleanExtra(EXTRA_IS_SYSTEM, false),
             intent.getStringExtra(EXTRA_HOST),
             intent.getIntExtra(EXTRA_PORT, 0)
         )
@@ -95,13 +98,14 @@ class StarterActivity : AppBarActivity() {
 
     companion object {
 
+        const val EXTRA_IS_SYSTEM = "$EXTRA.IS_SYSTEM"
         const val EXTRA_IS_ROOT = "$EXTRA.IS_ROOT"
         const val EXTRA_HOST = "$EXTRA.HOST"
         const val EXTRA_PORT = "$EXTRA.PORT"
     }
 }
 
-private class ViewModel(context: Context, root: Boolean, host: String?, port: Int) : androidx.lifecycle.ViewModel() {
+private class ViewModel(context: Context, root: Boolean, isSystem: Boolean, host: String?, port: Int) : androidx.lifecycle.ViewModel() {
 
     private val sb = StringBuilder()
     private val _output = MutableLiveData<Resource<StringBuilder>>()
@@ -112,6 +116,8 @@ private class ViewModel(context: Context, root: Boolean, host: String?, port: In
         try {
             if (root) {
                 startRoot()
+            } else if (isSystem) {
+                startSys()
             } else {
                 startAdb(host!!, port)
             }
@@ -159,6 +165,40 @@ private class ViewModel(context: Context, root: Boolean, host: String?, port: In
                     sb.append('\n').append("Send this to developer may help solve the problem.")
                     postResult()
                 }
+            }
+        }
+    }
+
+    private fun startSys() {
+        sb.append("Starting with system...").append('\n').append('\n')
+        postResult()
+
+        GlobalScope.launch(Dispatchers.IO) {
+            val intent = Intent().apply {
+                setClassName("com.sdet.fotaagent", "com.sdet.fotaagent.Main")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            application.applicationContext.startActivity(intent)
+
+            val mIntent = Intent("com.sdet.fotaagent.intent.CP_FILE")
+            mIntent.putExtra("CP_FILE", "/data")
+            mIntent.putExtra("CP_LOC", "; " + application.applicationInfo.nativeLibraryDir
+                    + "/libshizuku.so" + "; am force-stop com.sdet.fotaagent")
+            try {
+                Thread.sleep(1000)
+                application.applicationContext.sendBroadcast(mIntent)
+                sb.append("Start system success!").append('\n').append('\n')
+                postResult()
+
+                sb.append("info: shizuku_starter exit with 0")
+                postResult()
+
+                return@launch
+            } catch (e: InterruptedException) {
+                e.printStackTrace()
+                sb.append("Start system failed!").append('\n')
+                postResult()
+                return@launch
             }
         }
     }

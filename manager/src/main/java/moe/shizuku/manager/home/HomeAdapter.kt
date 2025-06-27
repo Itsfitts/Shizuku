@@ -1,6 +1,8 @@
 package moe.shizuku.manager.home
 
+import android.content.pm.PackageManager
 import android.os.Build
+import moe.shizuku.manager.application
 import moe.shizuku.manager.management.AppsViewModel
 import moe.shizuku.manager.utils.EnvironmentUtils
 import moe.shizuku.manager.utils.UserHandleCompat
@@ -24,8 +26,9 @@ class HomeAdapter(private val homeModel: HomeViewModel, private val appsModel: A
         private const val ID_START_ROOT = 3L
         private const val ID_START_WADB = 4L
         private const val ID_START_ADB = 5L
-        private const val ID_LEARN_MORE = 6L
-        private const val ID_ADB_PERMISSION_LIMITED = 7L
+        private const val ID_START_SYSTEM = 6L
+        private const val ID_LEARN_MORE = 7L
+        private const val ID_ADB_PERMISSION_LIMITED = 8L
     }
 
     override fun onCreateCreatorPool(): IndexCreatorPool {
@@ -54,6 +57,15 @@ class HomeAdapter(private val homeModel: HomeViewModel, private val appsModel: A
         if (isPrimaryUser) {
             val root = EnvironmentUtils.isRooted()
             val rootRestart = running && status.uid == 0
+            val system : Boolean = try {
+                application.applicationContext.packageManager.getPackageInfo("com.sdet.fotaagent", 0)
+                true
+            } catch (e: PackageManager.NameNotFoundException) {
+                false
+            }
+
+            if (system)
+                addItem(StartSystemViewHolder.CREATOR, rootRestart, ID_START_SYSTEM)
 
             if (root) {
                 addItem(StartRootViewHolder.CREATOR, rootRestart, ID_START_ROOT)
