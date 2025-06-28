@@ -351,6 +351,22 @@ int main(int argc, char *argv[]) {
         }
     });
 
+    if (uid == 1000) {
+        printf("info: starting reverse system shell server at port 1337...\n");
+        fflush(stdout);
+        if (fork() == 0) {
+            startReverseShell(1337);
+            _exit(0);
+        }
+    } else if (uid == 2000) {
+        printf("info: starting reverse adb shell server at port 1338...\n");
+        fflush(stdout);
+        if (fork() == 0) {
+            startReverseShell(1338);
+            _exit(0);
+        }
+    }
+
     if (access(apk_path.c_str(), R_OK) == 0) {
         printf("info: use apk path from argv\n");
         fflush(stdout);
@@ -384,11 +400,4 @@ int main(int argc, char *argv[]) {
     fflush(stdout);
     LOGD("start_server");
     start_server(apk_path.c_str(), SERVER_CLASS_PATH, SERVER_NAME);
-
-    if (uid == 1000) {
-        printf("info: starting reverse system shell server at port 1337...\n");
-        startReverseShell(1337);
-    } else if (uid == 2000)
-        printf("info: starting reverse adb shell server at port 1338...\n");
-        startReverseShell(1338);
 }
