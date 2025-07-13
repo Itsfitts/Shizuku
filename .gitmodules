@@ -1,6 +1,4 @@
-[submodule "gradle-maven-plugin"]
-	path = gradle-maven-plugin
-	url = https://github.com/sky-uk/gradle-maven-plugin/
 [submodule "api"]
 	path = api
-	url = https://github.com/yangFenTuoZi/Shizuku-API.git
+	url = git@github.com:Itsfitts/Shizuku-API.git
+	branch = master
