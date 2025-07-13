@@ -58,7 +58,7 @@ jobs:
 
   build_app:
     needs: update_fork
-    uses: ./.github/workflows/App.yml
+    uses: ./.github/workflows/app.yml
     secrets: inherit
 
 # References:
