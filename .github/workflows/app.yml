@@ -20,14 +20,9 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
-      - name: Write key
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
-        run: |
-          echo KEYSTORE_PASSWORD=${{ secrets.SIGNING_STORE_PASSWORD }} > signing.properties
-          echo KEYSTORE_ALIAS=${{ secrets.SIGNING_KEY_ALIAS }} >> signing.properties
-          echo KEYSTORE_ALIAS_PASSWORD='${{ secrets.SIGNING_KEY_PASSWORD }}' >> signing.properties
-          echo KEYSTORE_FILE=../key.jks >> signing.properties
-          echo ${{ secrets.SIGNING_KEY }} | base64 --decode > key.jks
+      - name: Decode keystore
+  run: |
+    echo "${{ secrets.SIGNING_KEY }}" | base64 --decode > my-release-key.jks
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -44,6 +39,10 @@ jobs:
           echo 'org.gradle.caching=true' >> gradle.properties
           echo 'org.gradle.parallel=true' >> gradle.properties
           ./gradlew :manager:assemble
+          env:
+    SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+    SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+    SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           releaseName=`ls manager/build/outputs/apk/release/shizuku*-v*-release.apk | awk -F '(/|-release.apk)' '{print $6}'` && echo "releaseName=$releaseName" >> $GITHUB_OUTPUT
       - name: Upload release
         if: success()
