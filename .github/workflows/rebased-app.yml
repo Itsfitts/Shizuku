@@ -1,0 +1,60 @@
+name: Rebased App
+
+on:
+  push:
+    paths-ignore:
+      - '.github/ISSUE_TEMPLATE'
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.SIGNING_KEY }}" | base64 --decode > my-release-key.jks
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          dependency-graph: generate-and-submit
+          build-scan-publish: true
+          build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
+          build-scan-terms-of-use-agree: "yes"
+
+      - name: Build with Gradle
+        id: buildWithGradle
+        env:
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
+          echo 'android.sdk.channel=3' >> gradle.properties
+          echo 'android.native.buildOutput=verbose' >> gradle.properties
+          echo 'org.gradle.caching=true' >> gradle.properties
+          echo 'org.gradle.parallel=true' >> gradle.properties
+          ./gradlew :manager:assemble
+          releaseName=$(ls manager/build/outputs/apk/release/shizuku*-v*-release.apk | awk -F '(/|-release.apk)' '{print $6}')
+          echo "releaseName=$releaseName" >> $GITHUB_OUTPUT
+
+      - name: Upload release
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.buildWithGradle.outputs.releaseName }}
+          path: "manager/build/outputs"
+          compression-level: 9
